@@ -17,7 +17,7 @@ migrate = Migrate(app, db)
 db.init_app(app)
 
 api = Api(app)
-
+    
 class ClearSession(Resource):
 
     def delete(self):
@@ -84,15 +84,33 @@ class CheckSession(Resource):
         
         return {}, 401
 
+@app.before_request
+def check_login():
+    if session.get('user_id') is None and request.endpoint in ['member_index', 'member_article']:
+        return make_response({'error': 'Unauthorized'}, 401)
+    
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        # if session.get('user_id') == None:
+        #     return make_response({'error': 'Unauthorized'}, 401)
+        
+        member_only_articles = Article.query.filter_by(is_member_only = True).all()
+        articles_to_dict = [article.to_dict() for article in member_only_articles]
+
+        return make_response(articles_to_dict, 200)
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        # if session.get('user_id') == None:
+        #     return make_response({'error': 'Unauthorized'}, 401)
+
+        article = Article.query.filter_by(is_member_only = True).filter_by(id = id).first()
+        if article:
+            return make_response(article.to_dict(), 200)
+        # else:
+        #     return make_response({'error': 'article not members only'}, 404)
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
